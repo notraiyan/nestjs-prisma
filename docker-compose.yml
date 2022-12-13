@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+  nestjs-db:
+    container_name: nestjs-db
+    image: mariadb-local
+    restart: always
+    build: ./mariadb/
+    environment:
+      MYSQL_DATABASE: nestjs-db
+      MYSQL_ROOT_PASSWORD: nestjs-db
+      MYSQL_PASSWORD: nestjs-db
+      MYSQL_USER: nestjs-db
+      MYSQL_PORT: 3308
+    ports:
+      - 3308:3308
+    expose:
+      - 3308
+
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      MYSQL_PORT: 3306
+    ports:
+      - 8080:8080
+
+  app:
+    container_name: app
+    image: node:alpine
+    working_dir: /usr/src/app
+    command: sh -c "npm install && npx prisma migrate deploy && npm run start:dev"
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - MYSQL_PORT=3307
+      - DATABASE_URL=mysql://root:nestjs-db@nestjs-db:3306/nestjs-db
+      - PORT=3001
+      - SMTP_HOST=smtp
+      - SMTP_PORT=1025
+    ports:
+      - 3001:3000
+    volumes:
+      - ./:/usr/src/app
+    links:
+      - nestjs-db
+    depends_on:
+      - nestjs-db
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: always
+    container_name: smtp
+    logging:
+      driver: "none" # disable saving logs
+    ports:
+      - 1025:1025 # smtp server
+      - 8025:8025 # web ui
